@@ -36,6 +36,12 @@ def generate_launch_description():
        # condition=UnlessCondition(LaunchConfiguration('gui'))
     )
 
+    real_joint_state_publisher = Node(
+        package='jointpub',
+        executable='jointpub'
+
+    )
+
     #joint_state_publisher_gui_node = Node(
     #    package='joint_state_publisher_gui',
     #    executable='joint_state_publisher_gui',
@@ -55,6 +61,7 @@ def generate_launch_description():
         model_arg,
         rviz_arg,
         joint_state_publisher_node,
+        real_joint_state_publisher,
     #    joint_state_publisher_gui_node,
         robot_state_publisher_node,
         rviz_node

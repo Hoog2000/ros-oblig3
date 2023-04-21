@@ -38,10 +38,10 @@ namespace craneads
         AdsVariables() = delete;
 
         explicit AdsVariables(AdsDevice& route)
-            : activateMotion{route, "MAIN.bActivateMotion"}
-            , velocityReference{route, "MAIN.fVelRef"}
-            , positionReference{route, "MAIN.fPosRef"}
-            , positionMeasurement{route, "G_test.fPosMeas"}
+            : activateMotion{route, "G_ControllerGreenCrane.bStartAutoMode"}
+            , velocityReference{route, "G_ControllerGreenCrane.fVelSP"}
+            , positionReference{route, "G_ControllerGreenCrane.fPosSP"}
+            , positionMeasurement{route, "G_CylinderState.thetaBoom"}
         {
             // Do nothing.
         }
@@ -69,6 +69,11 @@ namespace craneads
         void activateMotion()
         {
             ads_.activateMotion = true;
+        }
+
+        bool getActivateMotion()
+        {
+            return ads_.activateMotion;
         }
 
         void deactivateMotion()
@@ -125,19 +130,32 @@ namespace craneads
 
             publisher_ = this->create_publisher<crane_interface::msg::Craneparameters>("thetaBoomValue", 5);
             timer_ = this->create_wall_timer(crane::config::dt, std::bind(&JointStatePublisher::update_theta_Boom, this));
+
+            publisherAutoMode_ = this->create_publisher<crane_interface::msg::Cranecontrol>("autoModeParam", 5);
+            timerAutoMode_  = this->create_wall_timer(crane::config::dt, std::bind(&JointStatePublisher::update_auto_param, this));
             
         }
     private:
         void update_theta_Boom()
         {
             auto message = crane_interface::msg::Craneparameters();
-            message.theta_boom = adsHandler_.getPositionMeasurement();
+            message.theta_boom = -adsHandler_.getPositionMeasurement();
             RCLCPP_INFO(this->get_logger(), "Theta boom: '%f'", message.theta_boom);
-            publisher_->publish(message);            
+            publisher_->publish(message);       
+        }
+
+        void update_auto_param()
+        {
+            auto message = crane_interface::msg::Cranecontrol();
+            message.start = adsHandler_.getActivateMotion();
+            //RCLCPP_INFO(this->get_logger(), "Theta boom: '%f'", message.theta_boom);
+            publisherAutoMode_->publish(message);       
         }
 
         rclcpp::TimerBase::SharedPtr timer_;
+        rclcpp::TimerBase::SharedPtr timerAutoMode_;
         rclcpp::Publisher<crane_interface::msg::Craneparameters>::SharedPtr publisher_;
+        rclcpp::Publisher<crane_interface::msg::Cranecontrol>::SharedPtr publisherAutoMode_;
         size_t step_;
         craneads::AdsHandler adsHandler_;
         

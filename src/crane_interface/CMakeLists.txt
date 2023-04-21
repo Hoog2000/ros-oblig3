@@ -11,7 +11,7 @@ find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Craneparameters.msg"
-  "msg/Cranecontrol.msg"  
+  "msg/Cranecontrol.msg" 
 )
 
 if(BUILD_TESTING)
