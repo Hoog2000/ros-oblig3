@@ -76,7 +76,7 @@ class Simulator(Node):
             pass
     
     def listener_callback(self, message):
-         self.get_logger().info('I heard: "%f"' % message.theta_boom)
+         #self.get_logger().info('I heard: "%f"' % message.theta_boom)
          self.theta_boomm = 2*pi*(message.theta_boom)/360
          rclpy.spin_once(self)    
 

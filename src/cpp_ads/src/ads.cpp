@@ -39,17 +39,19 @@ namespace craneads
 
         explicit AdsVariables(AdsDevice& route)
             : activateMotion{route, "G_ControllerGreenCrane.bStartAutoMode"}
-            , velocityReference{route, "G_ControllerGreenCrane.fVelSP"}
             , positionReference{route, "G_ControllerGreenCrane.fPosSP"}
             , positionMeasurement{route, "G_CylinderState.thetaBoom"}
+            , ppBar{route, "G_CylinderState.ppbar"}
+            , prBar{route, "G_CylinderState.prbar"}
         {
             // Do nothing.
         }
 
         AdsVariable<bool> activateMotion;
-        AdsVariable<double> velocityReference;
         AdsVariable<double> positionReference;
         AdsVariable<double> positionMeasurement;
+        AdsVariable<double> ppBar;
+        AdsVariable<double> prBar;
     };
 
 
@@ -66,9 +68,9 @@ namespace craneads
         AdsHandler() : AdsHandler({127, 0, 0, 1,  1, 1}, "127.0.0.1") { }
 
 
-        void activateMotion()
+        void startStopMotion(bool bAutoStart)
         {
-            ads_.activateMotion = true;
+            ads_.activateMotion = bAutoStart;
         }
 
         bool getActivateMotion()
@@ -81,19 +83,24 @@ namespace craneads
             ads_.activateMotion = false;
         }
 
-        void setVelocityReference(double value)
-        {
-            ads_.velocityReference = value;
-        }
-
         void setPositionReference(double value)
         {
-            ads_.velocityReference = value;
+            ads_.positionReference = value;
         }
 
         double getPositionMeasurement()
         {
             return ads_.positionMeasurement;
+        }
+
+        double getppBar()
+        {
+            return ads_.ppBar;
+        }
+
+        double getprBar()
+        {
+            return ads_.prBar;
         }
 
 
@@ -127,12 +134,17 @@ namespace craneads
         //, AdsHandler testads;
         {
             using namespace std::chrono_literals;
+            this->declare_parameter("bstartstop", false);
+            this->declare_parameter("posSet", 0.0);
+            
+            //posSetdenne = this->get_parameter("posSet").as_double();
+            //posSetdenne = this->get_parameter("posSet");
 
             publisher_ = this->create_publisher<crane_interface::msg::Craneparameters>("thetaBoomValue", 5);
             timer_ = this->create_wall_timer(crane::config::dt, std::bind(&JointStatePublisher::update_theta_Boom, this));
 
-            publisherAutoMode_ = this->create_publisher<crane_interface::msg::Cranecontrol>("autoModeParam", 5);
-            timerAutoMode_  = this->create_wall_timer(crane::config::dt, std::bind(&JointStatePublisher::update_auto_param, this));
+            //publisherAutoMode_ = this->create_publisher<crane_interface::msg::Cranecontrol>("autoModeParam", 5);
+            //timerAutoMode_  = this->create_wall_timer(crane::config::dt, std::bind(&JointStatePublisher::update_auto_param, this));
             
         }
     private:
@@ -140,10 +152,14 @@ namespace craneads
         {
             auto message = crane_interface::msg::Craneparameters();
             message.theta_boom = -adsHandler_.getPositionMeasurement();
-            RCLCPP_INFO(this->get_logger(), "Theta boom: '%f'", message.theta_boom);
-            publisher_->publish(message);       
+            prBar1 = adsHandler_.getprBar();
+            ppBar2 = adsHandler_.getppBar();
+            RCLCPP_INFO(this->get_logger(), "\n Theta boom: '%f'\n Pressure rod side: '%f'\n Pressure piston side: '%f'", message.theta_boom, ppBar2, prBar1);
+            publisher_->publish(message);  
+            adsHandler_.setPositionReference(this->get_parameter("posSet").as_double());
+            adsHandler_.startStopMotion(this->get_parameter("bstartstop").as_bool());     
         }
-
+        /*
         void update_auto_param()
         {
             auto message = crane_interface::msg::Cranecontrol();
@@ -151,16 +167,19 @@ namespace craneads
             //RCLCPP_INFO(this->get_logger(), "Theta boom: '%f'", message.theta_boom);
             publisherAutoMode_->publish(message);       
         }
-
+        */
         rclcpp::TimerBase::SharedPtr timer_;
-        rclcpp::TimerBase::SharedPtr timerAutoMode_;
+        //rclcpp::TimerBase::SharedPtr timerAutoMode_;
         rclcpp::Publisher<crane_interface::msg::Craneparameters>::SharedPtr publisher_;
-        rclcpp::Publisher<crane_interface::msg::Cranecontrol>::SharedPtr publisherAutoMode_;
+        //rclcpp::Publisher<crane_interface::msg::Cranecontrol>::SharedPtr publisherAutoMode_;
         size_t step_;
         craneads::AdsHandler adsHandler_;
         
         //craneads::AdsHandler blablabal(remoteNetId, remoteIpV4);
         double thetaBoomValue_;
+        double posSetdenne;
+        double prBar1;
+        double ppBar2;
 
 };
 }
